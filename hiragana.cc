@@ -137,6 +137,14 @@ void drawButton(HDC hdc, RECT* rc,
 	DrawTextW(hdc, str, -1, rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE);		
 }
 
+void DrawTextCent(HDC hdc, const RECT *rc, LPCWSTR str, int c)
+{
+	SIZE size; GetTextExtentPoint(hdc, str, c, &size);
+	int x = (rc->left + rc->right - size.cx)>>1;
+	int y = (rc->top + rc->bottom - size.cy)>>1;
+	ExtTextOut(hdc, x, y, ETO_OPAQUE, rc, str, c, NULL);
+}
+
 void redraw(HWND hwnd, HDC hdc)
 {
 	SelectObject(hdc, g_hfont);
@@ -151,14 +159,15 @@ void redraw(HWND hwnd, HDC hdc)
 	
 	SelectObject(hdc, g_hFontLabel);	
 	SetTextColor(hdc, 0xFFFFFF);
+	SetBkColor(hdc, GetSysColor(COLOR_HIGHLIGHT));
+	
 	const char* labels = romanji_x + g_shift*10;
 	for(int i = 0; i < 10; i++) 
 	{
 		RECT rc; getButtonRect(&rc, i*5);
 		rc.bottom = rc.top-3; rc.top = 0;
 		WCHAR str[2] = {labels[i], 0};
-		DrawTextW(hdc, str, -1, &rc, 
-			DT_VCENTER | DT_CENTER | DT_SINGLELINE);		
+		DrawTextCent(hdc, &rc, str, 1);
 	}
 	
 }
@@ -169,7 +178,7 @@ void OnMouseUp(HWND hwnd)
 	if(g_selIndex == KANASET) {
 		g_charset = (g_charset == hiragana)
 			? katakana : hiragana;
-		InvalidateRect(hwnd, NULL, TRUE);		
+		InvalidateRect(hwnd, NULL, FALSE);		
 		return;	
 	}
 
@@ -179,7 +188,7 @@ void OnMouseUp(HWND hwnd)
 		int newShift = (g_selIndex==DAKU)?1:2;
 		if(g_shift == newShift) g_shift = 0;
 		else g_shift = newShift;
-		InvalidateRect(hwnd, NULL, TRUE);		
+		InvalidateRect(hwnd, NULL, FALSE);		
 		return;
 	}
 	
@@ -194,6 +203,13 @@ void OnMouseUp(HWND hwnd)
     SendInput(1, &ip, sizeof(INPUT)); }
 	if(g_shift) { g_shift = 0;
 		InvalidateRect(hwnd, NULL, FALSE); }
+}
+
+void invalidate_button(HWND hwnd, int i)
+{
+	RECT rc; getButtonRect(&rc, i);
+	InflateRect(&rc, 1, 1);
+	InvalidateRect(hwnd, &rc, FALSE);
 }
 
 void OnmoveMouse(HWND hwnd, LPARAM lParam)
@@ -212,8 +228,9 @@ void OnmoveMouse(HWND hwnd, LPARAM lParam)
 	// update the window
 FOUND:
 	if(g_selIndex != newCharSel) {
+		invalidate_button(hwnd, g_selIndex);
+		invalidate_button(hwnd, newCharSel);
 		g_selIndex = newCharSel;
-		InvalidateRect(hwnd, NULL, FALSE);
 	}
 }
 
