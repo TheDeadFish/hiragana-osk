@@ -4,6 +4,16 @@
 
 const char regKey[] = "SOFTWARE\\DeadFishShitware\\hiragana-osk-VQKO";
 
+class MouseTrackLeave
+{
+	bool m_bTracking = false;
+public:
+	void move(HWND hwnd)	{
+		if (!m_bTracking) { m_bTracking = true;
+			TRACKMOUSEEVENT tme = {sizeof(tme),	TME_LEAVE, 
+				hwnd, 0}; TrackMouseEvent(&tme);  }}
+	void leave(void) { m_bTracking = false; }
+};
 
 #define DAKU 51
 #define HANDA 55
@@ -172,6 +182,8 @@ void redraw(HWND hwnd, HDC hdc)
 	
 }
 
+MouseTrackLeave g_trackLeave;
+
 void OnMouseUp(HWND hwnd)
 {
 	// update character set
@@ -294,12 +306,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if(hPreWindow) {
 				SetForegroundWindow(hPreWindow);
 				hPreWindow = NULL; }
+			g_trackLeave.move(hwnd);
 			OnmoveMouse(hwnd, lParam);
 			break;
 		case WM_LBUTTONUP:
 			OnMouseUp(hwnd);
 			break;
 			
+		case WM_MOUSELEAVE:
+			g_trackLeave.leave();
+			OnmoveMouse(hwnd, 0);
+			break;
 			
 		case WM_ACTIVATEAPP:
 			if(!wParam) hPreWindow = NULL;
